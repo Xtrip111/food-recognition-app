@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:provider/provider.dart';
 import '../services/image_analyzer.dart';
 import '../models/recipe.dart';
 import '../models/ingredient.dart';
+import '../auth/user_provider.dart';
+import '../services/favorites_service.dart';
+import '../screens/auth/login_screen.dart';
 
 class ResultsScreen extends StatefulWidget {
   final String imagePath;
@@ -19,6 +23,7 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
   List<Ingredient> _ingredients = [];
   String _error = '';
   int _selectedRecipeIndex = 0;
+  int _selectedTabIndex = 0; // 0 - ингредиенты, 1 - инструкции
 
   // Контроллеры анимации
   late AnimationController _fadeController;
@@ -356,7 +361,6 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
     );
   }
 
-  // Мы продолжим _buildResultsScreen в следующей части
   Widget _buildResultsScreen() {
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -709,6 +713,7 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
 
   Widget _buildSelectedRecipe() {
     final recipe = _recipes[_selectedRecipeIndex];
+    final userProvider = Provider.of<UserProvider>(context);
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -773,53 +778,15 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
             // Вкладки для переключения между ингредиентами и инструкциями
             _buildRecipeTabBar(),
 
-            // Ингредиенты
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Ингредиенты:',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...recipe.ingredients.map((ingredient) => _buildIngredientItem(ingredient)),
-                  const Divider(height: 32),
-                  const Text(
-                    'Инструкция:',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInstructions(recipe.instructions),
-                ],
-              ),
-            ),
+            // Контент в зависимости от выбранной вкладки
+            _selectedTabIndex == 0
+                ? _buildIngredientsTab(recipe)
+                : _buildInstructionsTab(recipe),
 
             // Кнопка "Добавить в избранное"
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Рецепт сохранен в избранное!')),
-                    );
-                  },
-                  icon: const Icon(Icons.favorite_border),
-                  label: const Text('Добавить в избранное'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
+              child: _buildFavoriteButton(recipe),
             ),
           ],
         ),
@@ -832,43 +799,92 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _buildTabButton('Ингредиенты', true, Icons.list),
-          _buildTabButton('Инструкция', false, Icons.menu_book),
+          _buildTabButton('Ингредиенты', 0, Icons.list),
+          _buildTabButton('Инструкция', 1, Icons.menu_book),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(String title, bool isActive, IconData icon) {
+  Widget _buildTabButton(String title, int index, IconData icon) {
+    final bool isActive = _selectedTabIndex == index;
+
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isActive ? const Color(0xFF4CAF50) : Colors.grey[300]!,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedTabIndex = index;
+          });
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? const Color(0xFF4CAF50) : Colors.grey[300]!,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isActive ? const Color(0xFF4CAF50) : Colors.grey[600],
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: isActive ? const Color(0xFF4CAF50) : Colors.grey[600],
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isActive ? const Color(0xFF4CAF50) : Colors.grey[600],
+      ),
+    );
+  }
+
+  Widget _buildIngredientsTab(Recipe recipe) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ингредиенты:',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: isActive ? const Color(0xFF4CAF50) : Colors.grey[600],
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              ),
+          ),
+          const SizedBox(height: 12),
+          ...recipe.ingredients.map((ingredient) => _buildIngredientItem(ingredient)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionsTab(Recipe recipe) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Инструкция:',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          _buildInstructions(recipe.instructions),
+        ],
       ),
     );
   }
@@ -883,8 +899,8 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
             margin: const EdgeInsets.only(top: 6),
             width: 8,
             height: 8,
-            decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50),
+            decoration: const BoxDecoration(
+              color: Color(0xFF4CAF50),
               shape: BoxShape.circle,
             ),
           ),
@@ -918,8 +934,8 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
               Container(
                 width: 24,
                 height: 24,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4CAF50),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -944,6 +960,99 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
         ),
       ),
     );
+  }
+
+  Widget _buildFavoriteButton(Recipe recipe) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final String recipeId = recipe.name; // Используем имя рецепта как ID
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => _toggleFavorite(recipe),
+        icon: Icon(
+          userProvider.isFavorite(recipeId)
+              ? Icons.favorite
+              : Icons.favorite_border,
+        ),
+        label: Text(
+          userProvider.isFavorite(recipeId)
+              ? 'В избранном'
+              : 'Добавить в избранное',
+        ),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          backgroundColor: userProvider.isFavorite(recipeId)
+              ? Colors.pink
+              : Colors.green,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleFavorite(Recipe recipe) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    if (!userProvider.isLoggedIn) {
+      // Показываем диалог с предложением войти
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Требуется авторизация'),
+          content: const Text(
+            'Для сохранения рецепта в избранное необходимо войти в аккаунт. Хотите войти сейчас?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+              child: const Text('Войти'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final recipeId = recipe.name; // Используем имя рецепта как ID
+    final isInFavorites = userProvider.isFavorite(recipeId);
+    final favoritesService = FavoritesService();
+
+    if (isInFavorites) {
+      // Удаляем из избранного
+      await userProvider.removeFromFavorites(recipeId);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Рецепт удален из избранного')),
+      );
+    } else {
+      // Добавляем в избранное
+      final success = await userProvider.addToFavorites(recipeId);
+
+      if (success) {
+        // Сохраняем в Firestore
+        await favoritesService.addToFavorites(recipe, widget.imagePath);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Рецепт добавлен в избранное')),
+        );
+      }
+    }
   }
 
   int _calculateTotalCalories() {
@@ -987,7 +1096,7 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
     if (lowercaseName.contains('мяс') ||
         lowercaseName.contains('говядин') ||
         lowercaseName.contains('свинин')) {
-      return Icons.start_sharp;
+      return Icons.restaurant_menu;
     } else if (lowercaseName.contains('рыб') ||
         lowercaseName.contains('лосос') ||
         lowercaseName.contains('треск')) {
@@ -1015,15 +1124,5 @@ class _ResultsScreenState extends State<ResultsScreen> with TickerProviderStateM
     }
 
     return Icons.restaurant;
-  }
-
-  // Добавьте в конец класса _ResultsScreenState:
-
-  @override
-  void didUpdateWidget(ResultsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.imagePath != widget.imagePath) {
-      _analyzeImage();
-    }
   }
 }

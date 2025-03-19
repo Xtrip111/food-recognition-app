@@ -17,7 +17,23 @@ dependencies:
   http: ^1.1.0
   cupertino_icons: ^1.0.5
   image_picker: ^0.8.7
-  # google_generative_ai: ^0.1.0  # Удалено
+
+  # Firebase зависимости
+  firebase_core: ^2.14.0
+  firebase_auth: ^4.6.3
+  cloud_firestore: ^4.8.2
+  firebase_storage: ^11.2.4
+
+  # Google аутентификация
+  google_sign_in: ^6.1.4
+
+  # Управление состоянием
+  provider: ^6.0.5
+
+  # Полезные утилиты
+  cached_network_image: ^3.2.3
+  shared_preferences: ^2.2.0
+  intl: ^0.18.0
 
 dev_dependencies:
   flutter_test:
@@ -26,3 +42,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600

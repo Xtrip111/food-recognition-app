@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
-import 'screens/home_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'firebase_options.dart';
+import 'auth/user_provider.dart';
+import 'screens/main_screen.dart';
+
+
 
 List<CameraDescription> cameras = [];
 
@@ -23,6 +29,11 @@ Future<void> main() async {
     ),
   );
 
+  // Инициализируем Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Получаем список доступных камер
   try {
     cameras = await availableCameras();
@@ -30,7 +41,12 @@ Future<void> main() async {
     print('Ошибка при получении камер: ${e.description}');
   }
 
-  runApp(const FoodRecognitionApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => UserProvider(),
+      child: const FoodRecognitionApp(),
+    ),
+  );
 }
 
 class FoodRecognitionApp extends StatelessWidget {
@@ -139,7 +155,7 @@ class FoodRecognitionApp extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
         ),
       ),
-      home: HomeScreen(cameras: cameras),
+      home: MainScreen(cameras: cameras),
     );
   }
 }
