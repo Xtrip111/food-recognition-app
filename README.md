@@ -48,25 +48,7 @@ flutter run
 - **Camera API** для работы с камерой устройства
 - **Image Picker** для выбора изображений из галереи
 
-## Структура проекта
 
-```
-lib/
-├── config/
-│   ├── api_keys.dart
-│   └── api_keys.example.dart
-├── models/
-│   ├── ingredient.dart
-│   └── recipe.dart
-├── screens/
-│   ├── home_screen.dart
-│   ├── camera_screen.dart
-│   └── results_screen.dart
-├── services/
-│   ├── openai_service.dart
-│   └── image_analyzer.dart
-└── main.dart
-```
 
 ## Требования
 
